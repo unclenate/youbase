@@ -10,6 +10,15 @@ Envelope = require 'ecc-envelope'
 Collection = require './collection'
 Definition = require './definition'
 
+ScarDefinition =
+  permissions: 'public'
+  meta: {}
+  form: {}
+  schema:
+    title: 'Scar'
+    type: 'object'
+  children: {}
+
 class Document
   constructor: (@custodian, key) ->
     if !(@ instanceof Document) then return new Document(@custodian, key)
@@ -53,7 +62,7 @@ class Document
   link: (key, data) ->
     if data?
       @custodian.data.put(data)
-      .then (hash) => @_links[key] = bs.encode(Buffer.from(hash))
+      .then (hash) => @_links[key] = bs.encode(new Buffer(hash))
     else @custodian.data.get(@_links[key])
 
   definition: (definition) ->
@@ -61,7 +70,7 @@ class Document
       return defer(false) if @readonly
       definition = Definition(@custodian, definition)
       definition.save().then (hash) =>
-        @_links.definition = bs.encode(Buffer.from(hash))
+        @_links.definition = bs.encode(new Buffer(hash))
       .then => definition.children()
       .then (children) => @children._definitions = children
       .then => @_links.definition
@@ -86,9 +95,11 @@ class Document
         key = ecc.sha256(@xpub) if permissions == 'hardened'
         key = ecc.sha256(@prv) if permissions == 'private'
         ecc.cipher(data, key, iv, 'aes').then (ciphertext) =>
+          iv = bs.encode(iv)
+          ciphertext = bs.encode(ciphertext)
           @link('data', {iv: iv, alg: alg, ciphertext: ciphertext})
 
-  decrypt: (cipher) ->
+  decrypt: ->
     @definition()
     .then (definition) -> definition.get('permissions')
     .then (permissions) =>
@@ -96,7 +107,9 @@ class Document
         return cipher if permissions == 'public'
         key = ecc.sha256(@xpub) if permissions == 'hardened'
         key = ecc.sha256(@prv) if permissions == 'private'
-        ecc.decipher(cipher.ciphertext, key, cipher.iv, cipher.alg)
+        ciphertext = bs.decode(cipher.ciphertext)
+        iv = bs.decode(cipher.iv)
+        ecc.decipher(ciphertext, key, iv, cipher.alg)
 
   validate: ->
     @definition()
@@ -116,6 +129,19 @@ class Document
       @data().then (data) =>
         @_meta = _(meta).mapValues((path) -> _.get(data, path)).omitBy(_.isUndefined).value()
 
+  summary: ->
+    @meta()
+    .then (meta) =>
+      meta: meta
+      document: @
+
+  details: ->
+    @_fetch
+    .then => @data()
+    .then (data) =>
+      data: data
+      document: @
+
   save: ->
     return defer(false) if @readonly
     @validate().then => @meta()
@@ -128,6 +154,12 @@ class Document
         from: @privateKey
 
       @custodian.document.put @_envelope.encode()
+
+  redact: ->
+    @children.all(true, 'redact')
+    .then => @definition(ScarDefinition)
+    .then => @data({})
+    .then => @save()
 
 exports = module.exports = Document
 

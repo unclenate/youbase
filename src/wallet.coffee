@@ -25,4 +25,8 @@ class Wallet
 
     @profiles = Collection(@custodian, Document, @privateExtendedKey, true)
 
+Wallet.generateMnemonic = () ->
+    bip39.generateMnemonic()
+
 exports = module.exports = Wallet
+

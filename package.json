@@ -1,12 +1,13 @@
 {
   "name": "youbase",
-  "version": "0.1.3",
+  "version": "0.1.12",
   "description": "An Individual-Centric Cryptographic Data Store",
   "author": "Josh Robinson",
   "license": "MIT",
   "main": "lib/index.js",
+  "types": "index.d.ts",
   "bin": {
-    "youbase": "cli/index.js"
+    "youbase": "cli/youbase.js"
   },
   "scripts": {
     "test": "gulp test",
@@ -20,16 +21,18 @@
     "bs58check": "^1.0.8",
     "coininfo": "~0.2.1",
     "coinkey": "~1.3.0",
-    "coinstring": "~2.0.0",
+    "coinstring": "^2.3.0",
     "commander": "^2.9.0",
     "crypto": "0.0.3",
     "dotenv": "^2.0.0",
-    "ecc-envelope": "^1.0.4",
-    "ecc-tools": "^1.0.2",
+    "ecc-envelope": "^1.0.7",
+    "ecc-tools": "^1.0.3",
     "ecdsa": "~0.5.3",
     "express": "^4.14.0",
     "hdkey": "~0.7.1",
+    "json-schema-ref-parser": "^3.1.2",
     "level-sublevel": "^6.5.4",
+    "leveldown": "^1.6.0",
     "levelup": "^1.3.2",
     "lodash": "~4.15.0",
     "memdown": "^1.2.0",

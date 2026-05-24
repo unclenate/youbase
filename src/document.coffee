@@ -30,7 +30,7 @@ class Document
       @hdkey = HDKey.fromExtendedKey(bs.encode(key))
       @privateKey = @hdkey.privateKey
       @publicKey = @hdkey.publicKey
-      @children = new Collection(@custodian, Document, @hdkey.privateExtendedKey ? @hdkey.publicExtendedKey)
+      @children = @child = new Collection(@custodian, Document, @hdkey.privateExtendedKey ? @hdkey.publicExtendedKey)
     else if key.length == 33
       @publicKey = key
     else if key.length == 32
@@ -49,6 +49,7 @@ class Document
     @fetch().else(false)
 
   fetch: ->
+    @_definition = undefined
     @_fetch = @custodian.document.get(@publicKey)
     .then (envelope) =>
       return false unless envelope
@@ -68,13 +69,15 @@ class Document
   definition: (definition) ->
     if definition?
       return defer(false) if @readonly
-      definition = Definition(@custodian, definition)
-      definition.save().then (hash) =>
+      (@_definition = defer new Definition(@custodian, definition))
+      .then (definition) => definition.save()
+      .then (hash) =>
         @_links.definition = bs.encode(new Buffer(hash))
-      .then => definition.children()
+        @_definition
+      .then (definition) => definition.children()
       .then (children) => @children._definitions = children
       .then => @_links.definition
-    else defer Definition(@custodian, @_links.definition)
+    else @_definition ?= @_fetch.then => new Definition(@custodian, @_links.definition)
 
   data: (data, alg='aes') ->
     if data?
@@ -120,7 +123,7 @@ class Document
         validation = tv4.validateMultiple(data, schema, false, true)
         @errors = validation.errors
         if validation.valid then data
-        else defer.reject Error("Data does not match schema: #{@errors} s#{JSON.stringify(schema)} d#{JSON.stringify(data)}")
+        else defer.reject Error("Data does not match schema: #{@errors}")
 
   meta: ->
     @definition()

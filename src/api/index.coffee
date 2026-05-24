@@ -1,11 +1,22 @@
 express = require 'express'
 
-api = (app, config) ->
+routes = require './routes'
+Custodian = require '../custodian'
 
+api = (app, config) ->
   dbconfig = storage: 'levelup', dblocation: config.dblocation, cleardb: config.cleardb
-  routes = require('./routes')( require('../custodian')(dbconfig))
+  routes = routes(new Custodian(dbconfig))
   app.use require('morgan')('dev')
-  app.use require('body-parser').json(type: 'application/json')
+
+  app.use (req, res, next) ->
+    data=''
+    req.setEncoding('utf8')
+    req.on 'data', (chunk) -> data += chunk
+    req.on 'end', ->
+      if req.headers['content-type'] == 'application/json' && !!(data?.length)
+        req.body = JSON.parse(data)
+      else req.body = data
+      next()
 
   app.use (req, res, next) ->
     res.header("Access-Control-Allow-Origin", "*")
@@ -16,6 +27,7 @@ api = (app, config) ->
   app.use '/', routes
   app.use express.static(__dirname + '/../../docs')
   app.use express.static(__dirname + '/../../dist')
+  app.use express.static(__dirname + '/../../public')
 
   # catch 404 and forward to error handler
   app.use (req, res, next) ->

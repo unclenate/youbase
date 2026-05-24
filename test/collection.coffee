@@ -1,9 +1,11 @@
 expect = require('chai').expect
 
-Custodian = require '../lib/custodian'
-Collection = require '../lib/collection'
-Definition = require '../lib/definition'
-Document = require '../lib/document'
+HDKey = require 'hdkey'
+
+Custodian = require '../src/custodian'
+Collection = require '../src/collection'
+Definition = require '../src/definition'
+Document = require '../src/document'
 
 HealthProfile = require './fixtures/health'
 
@@ -22,7 +24,7 @@ describe 'Collection', ->
     @validPublicCollection = _.partial(@newCollection, @publicExtendedKey)
     @validPrivateCollection = _.partial(@newCollection, @privateExtendedKey)
 
-    @definition = Definition(@custodian, HealthProfile)
+    @definition = new Definition(@custodian, HealthProfile)
     @definition.save().then (hash) => @definitionHash = bs.encode(hash)
 
   describe 'extendedKey', ->
@@ -61,6 +63,18 @@ describe 'Collection', ->
       collection = @newCollection(@privateExtendedKey)
       result = collection.at(0)
       expect(result.readonly).to.be.false
+
+  describe 'derive', ->
+    it 'should return an HDKey for an index', ->
+      collection = @newCollection(@privateExtendedKey)
+      result = collection.derive(0)
+      expect(result).to.be.an.instanceOf(HDKey)
+
+    it 'should return an HDKey for an array of indices', ->
+      collection = @newCollection(@privateExtendedKey)
+      result = collection.derive([0,1,2])
+      expect(result.depth).to.equal(6)
+      expect(result).to.be.an.instanceOf(HDKey)
 
   describe 'definition', ->
     it 'should add a definition and return the hash', ->
@@ -103,6 +117,6 @@ describe 'Collection', ->
   describe 'sync', ->
     it 'should find each child that has data', ->
       @custodian.document._store.documents = {}
-      collection = Collection(@custodian, Document, @privateExtendedKey)
+      collection = new Collection(@custodian, Document, @privateExtendedKey)
       result = collection.sync().then -> collection._documents
       expect(result).to.eventually.deep.equal([])

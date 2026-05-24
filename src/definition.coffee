@@ -16,9 +16,9 @@ class Definition
   child: (key) -> @children().then(children) -> Definition(@custodian, children[key])
 
   children: ->
-    @_children ?= @_definition.then (definition) ->
-      deferObject.map (definition?.children ? {}), (child) ->
-        Definition(@custodian, child).save()
+    @_children ?= @_definition.then (definition) =>
+      deferObject.map (definition?.children ? {}), (child) =>
+        new Definition(@custodian, child).save()
         .then (hash) -> bs.encode(hash)
 
   get: (key) ->
@@ -34,16 +34,6 @@ class Definition
 
   save: -> @custodian.data.put(@get())
 
-Definition.bundle = (definition) ->
-  defer(definition).then (definition) ->
-    Definition.schema(definition.schema).then (schema) ->
-      definition.schema = schema
-      definition
-
-Definition.schema = (schema) ->
-  defer(schema).then (schema) ->
-    jsonSchemaParser.resolve(schema).then (refs) ->
-      if !!refs.paths(['http', 'file']).length then jsonSchemaParser.bundle(schema)
-      else schema
+Definition.bundle = (definition) -> defer(definition)
 
 exports = module.exports = Definition
